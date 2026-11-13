@@ -2,7 +2,9 @@
 
 How a partner's Shopify store sends paid orders to Breakmark for production and shipping.
 
-**Status:** draft v0.1, 2026-11-03. The endpoint is in development. Breakmark issues each store its URL when the store is connected; until then, nothing here is live.
+**Status:** v0.2, 2026-11-13. Testing on Breakmark's staging (test) system. Production is not live yet.
+
+**Setting up your store?** Start with [`SETUP.md`](./SETUP.md): a step-by-step checklist and a prompt you can paste into an AI assistant to walk you through the Shopify side.
 
 ## How it works
 
@@ -34,34 +36,19 @@ Breakmark verifies every request with Shopify's webhook signature:
 - `X-Shopify-Shop-Domain` must be the `.myshopify.com` domain registered for this connection.
 - `X-Shopify-Topic` must be `orders/create`.
 
-Share the signing secret with Breakmark only through the secure link Breakmark provides, never by email, chat or text. If you think it has leaked, tell Breakmark: we disable the connection and you rotate the secret in Shopify.
+Enter the signing secret only on the Shopify page of your Breakmark account (or a secure link Breakmark sends), never by email, chat or text. Breakmark can store it but nobody can read it back. If you think it has leaked, tell Breakmark: we disable the connection and you rotate the secret in Shopify.
 
 ## 3. Products
 
 ### SKU
 
-- Each Shopify product carries **one SKU: the Breakmark product id** (a UUID such as `00000000-0000-4000-8000-000000000001`).
-- Put the same SKU on **every variant** of that product.
-- Breakmark sends a spreadsheet with one row per product (`Handle`, `Title`, `SKU`). Load it with Shopify's product CSV export and import: fill `Variant SKU` on every variant row of each handle.
-- SKUs are per season. Each season Breakmark sends a new list.
-
-### Option values
-
-Shopify sends option **values** in each line item's `variant_title` (for example `Short Sleeve / Women's M`), not option names. So:
-
-- Option **names** are yours to choose.
-- Option **values** must exactly match the values on the Breakmark product, including capitalization. Breakmark's product list states the allowed values for each product.
-- Never put ` / ` (space, slash, space) inside a value. Shopify uses it to separate options.
-
-### Size
-
-Size is the one option Breakmark translates. Use fit, then size, in one value:
-
-| Fit | Size |
-|---|---|
-| `Women's`, `Men's`, `Youth` | `XS`, `S`, `M`, `L`, `XL`, `2XL`, `3XL`, `4XL` |
-
-Examples: `Women's M`, `Men's 2XL`, `Youth L`. Only the sizes the product offers are accepted.
+- **Every variant gets its own SKU from Breakmark.** The SKU says which team product it is and which style, fit and size was picked, for example `1008-001716-040201`.
+- Format: `CCCC-IIIIII-VVVVVV`: catalog product, team product (item number), then two digits per option (style, size, fit). Breakmark generates them; never build or edit one by hand.
+- Your option **names and values can say anything you like**. Breakmark reads only the SKU, so it never translates your option labels.
+- SKUs are per team product, not per player. Every player's jersey for a team uses that team's SKUs, so roster changes never need new SKUs.
+- Breakmark sends a CSV with one row per variant (team, product, style, fit, size, SKU). Put each SKU in Shopify's `Variant SKU` field for the matching variant.
+- Staging and live SKUs are different. The staging list is in [`staging/`](./staging/). Swap in the live list before going live.
+- If you add a style or size, ask Breakmark for its SKU first. An unknown SKU is held, not guessed.
 
 ### Name and number
 
@@ -69,10 +56,10 @@ Customizations come from line-item properties:
 
 | Property | Use |
 |---|---|
-| `Name on back` (or `Name`) | Printed name |
+| `Name on back` (or `Name`) | Printed name (exact spelling) |
 | `Number` | Printed number |
 
-Blank values print nothing. An option used only to set a customization price (for example "Name & Number") may be agreed with Breakmark and is then ignored. Tell Breakmark before changing it.
+On player jersey pages, fill these in automatically from the player (hidden fields in the product form) so fans don't type them. A jersey that needs a name or number and arrives without one is held for staff rather than printed blank.
 
 ## 4. Order requirements
 
@@ -84,9 +71,8 @@ Blank values print nothing. An option used only to set a customization price (fo
 | `test` | `true` on the test connection, `false` on the live connection |
 | `shipping_address` | `name`, `address1`, `city`, `zip`, `country_code` required. `province_code` required for US and Canada. `address2` and `phone` optional. |
 | `email` | the buyer's email |
-| `line_items[].sku` | a Breakmark product id from your current list (§3) |
+| `line_items[].sku` | a Breakmark variant SKU from your current list (§3) |
 | `line_items[].quantity` | a positive whole number |
-| `line_items[].variant_title` | option values as in §3 |
 | `line_items[].properties` | name and number as in §3 |
 | `id`, `name` | Shopify's order id and number (`#1001`), used to identify the order and prevent duplicates |
 
@@ -112,7 +98,7 @@ Breakmark answers `200` but creates no order until staff fix the cause and re-ru
 
 - the order isn't paid, is cancelled, or isn't in USD
 - a line item has no SKU, or the SKU isn't in your current Breakmark product list
-- an option value doesn't match the product, or a value is missing
+- a jersey that needs a name or number arrives without one
 - the shipping address is incomplete
 - a test order arrives on the live connection, or a live order on the test connection
 
@@ -130,17 +116,20 @@ Tracking numbers are not sent back to Shopify.
 
 ## 7. Testing
 
-1. Breakmark activates a test connection for your test store and sends its URL.
-2. You create the webhook there and share the signing secret securely.
-3. Load the test SKU list, turn on Shopify test payments (Bogus Gateway), and place test orders: one per product type, one with a name and number, one Youth size, and one with a missing SKU (it should be held).
-4. Send Breakmark the order numbers. Breakmark confirms each one.
+1. Use a Shopify test store if you can. Turn on test payments (Bogus Gateway); staging only accepts orders with `test: true`.
+2. Load the staging SKUs from [`staging/`](./staging/) onto the matching variants.
+3. Breakmark gives you the staging webhook URL. Create the webhook (§1) and enter the signing secret in your Breakmark account.
+4. Send one test order. Breakmark confirms it arrived and activates the connection.
+5. Place test orders: each jersey style, a Women's and a Youth size, one with a name and number, and one variant with a SKU deliberately removed (it should be held).
+6. Send Breakmark the order numbers. Breakmark confirms each one.
 
-The live connection is activated after testing passes and the season's SKUs are loaded.
+The live connection is activated after testing passes and the live SKUs are loaded.
 
 ## Changes
 
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | 2026-11-03 | First draft |
+| 0.2 | 2026-11-13 | One SKU per variant (option labels no longer matter); setup guide and AI prompt; staging SKU list |
 
 Questions: support@breakmark.com

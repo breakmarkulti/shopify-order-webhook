@@ -18,20 +18,35 @@
   },
   "line_items": [
     {
-      "sku": "00000000-0000-4000-8000-000000000001",
+      "sku": "1008-001716-020502",
       "quantity": 1,
-      "variant_title": "Short Sleeve / Women's M",
-      "price": "65.00",
-      "properties": []
+      "variant_title": "Short Sleeve / Women's / S",
+      "price": "150.00",
+      "properties": [
+        {
+          "name": "Name on back",
+          "value": "EXAMPLE"
+        },
+        {
+          "name": "Number",
+          "value": "7"
+        }
+      ]
     },
     {
-      "sku": "00000000-0000-4000-8000-000000000002",
+      "sku": "1008-001716-040203",
       "quantity": 1,
-      "variant_title": "No Hood / Name & Number / Youth L",
-      "price": "81.00",
+      "variant_title": "Long Sleeve Hood / Youth / XS",
+      "price": "200.00",
       "properties": [
-        { "name": "Name on back", "value": "EXAMPLE" },
-        { "name": "Number", "value": "7" }
+        {
+          "name": "Name on back",
+          "value": "EXAMPLE"
+        },
+        {
+          "name": "Number",
+          "value": "00"
+        }
       ]
     }
   ]
